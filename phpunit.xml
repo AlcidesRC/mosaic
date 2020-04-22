@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/8.5/phpunit.xsd"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    backupGlobals="false"
+    backupStaticAttributes="false"
+    colors="true"
+    convertErrorsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertWarningsToExceptions="true"
+    processIsolation="false"
+    beStrictAboutCoversAnnotation="true"
+    beStrictAboutOutputDuringTests="true"
+    beStrictAboutTodoAnnotatedTests="true"
+    bootstrap="vendor/autoload.php"
+    executionOrder="depends,defects"
+    forceCoversAnnotation="true"
+    stopOnError="true"
+    stopOnFailure="true"
+    stopOnIncomplete="true"
+    verbose="true"
+>
+    <testsuites>
+        <testsuite name="Histogram Test Suite">
+            <directory suffix="Test.php">tests</directory>
+        </testsuite>
+    </testsuites>
+
+    <filter>
+        <whitelist processUncoveredFilesFromWhitelist="true">
+            <directory suffix=".php">src</directory>
+        </whitelist>
+    </filter>
+</phpunit>

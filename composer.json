@@ -1,0 +1,36 @@
+{
+    "name": "alcidesrc/mosaic",
+    "description": "PHP7 + GD image mosaic generator applying the average color of each section",
+    "keywords": ["alcidesrc", "gd", "image", "mosaic", "color", "php7", "average-color", "palette"],
+    "homepage": "https://github.com/alcidesrc/mosaic",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Alcides Ramos",
+            "email": "info@alcidesramos.com",
+            "homepage": "https://alcidesrc.com",
+            "role": "Sr Developer"
+        }
+    ],
+    "require": {
+        "php": "^7.0",
+        "alcidesrc/colors": "dev-master",
+        "alcidesrc/histogram": "dev-master"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8",
+        "phpstan/phpstan": "^0.12.19"
+    },
+    "autoload": {
+        "psr-4": {
+            "AlcidesRC\\Mosaic\\": "src/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "check": "vendor/bin/phpstan analyse --level=8 --ansi src/"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
