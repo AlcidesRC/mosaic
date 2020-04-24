@@ -28,7 +28,8 @@
     },
     "scripts": {
         "test": "vendor/bin/phpunit",
-        "check": "vendor/bin/phpstan analyse --level=8 --ansi src/"
+        "check": "vendor/bin/phpstan analyse --level=8 --ansi src/",
+        "download-dataset": "php download-dataset.php"
     },
     "config": {
         "sort-packages": true
