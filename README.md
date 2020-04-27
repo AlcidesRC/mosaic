@@ -4,9 +4,9 @@
 
 This package provides a PHP7 class that allows to create an image mosaic or photomosaic: a picture that has been divided into tiled sections, each of them can be filled with plain colors or filled with similar images.
 
-| Image                                           | Mosaic with Plain Colors                                     | Mosaic with Similar Images                                   |
-| ----------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| ![Source Image](./tests/test-image-200x200.jpg) | ![Source Image](./tests/control/test-image-200x200-20x20.png) | ![Source Image](./tests/control/test-image-200x200-20x20-imdb.png) |
+| Image                                           | Plain Colors                                                 | Similar Images (Avg Color)                                   | Similar Images (pHashes)                                     |
+| ----------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![Source Image](./tests/test-image-200x200.jpg) | ![Source Image](./tests/control/test-image-200x200-20x20-plain.png) | ![Source Image](./tests/control/test-image-200x200-20x20-avg.png) | ![Source Image](./tests/control/test-image-200x200-20x20-phash.png) |
 
 ## Table of Contents
 
@@ -22,7 +22,9 @@ This package provides a PHP7 class that allows to create an image mosaic or phot
 
 ## Caveat
 
-This project has been developed as a *proof of concept* to practice some image processing and color manipulation skills.
+> This project has been developed as a quick  *proof of concept*  to put in practice some knowledges about image manipulation and color processing.
+>
+> So, in production environment is highly recommended to use [ImageMagick](https://imagemagick.org/index.php) or similar instead.
 
 ## Features
 
@@ -50,36 +52,7 @@ The way to select those images is based on the distance between the average colo
 $mosaic = new Mosaic(__DIR__ .'/source.jpg');
 
 // Creates a mosaic based on 20 rows and 30 cols
-[$targetFilenameInPng, $targetFilenameInHtml] = $mosaic->create(20, 30);
-```
-
-#### Example(s)
-
-##### 200x200 Image
-
-| Source                                          | Mosaic 2x2                                                  | Mosaic 20x20                                                 | Mosaic 100x100                                               |
-| ----------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| ![Source Image](./tests/test-image-200x200.jpg) | ![Source Image](./tests/control/test-image-200x200-2x2.png) | ![Source Image](./tests/control/test-image-200x200-20x20.png) | ![Source Image](./tests/control/test-image-200x200-100x100.png) |
-
-800x600 Image
-
-| Source                                          | Mosaic 2x2                                                  | Mosaic 20x20                                                 | Mosaic 100x100                                               |
-| ----------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| ![Source Image](./tests/test-image-800x600.jpg) | ![Source Image](./tests/control/test-image-800x600-2x2.png) | ![Source Image](./tests/control/test-image-800x600-20x20.png) | ![Source Image](./tests/control/test-image-800x600-100x100.png) |
-
-### Images
-
-```php
-$mosaic = new Mosaic(__DIR__ .'/source.jpg');
-
-$mosaic->loadImages(
-    __DIR__ .'/tests/dataset/*.jpg',   // Select the pattern from your image dataset for replacements
-    __DIR__ .'/tests/dataset/cache',   // Cache filename
-    false							// True if you want to refresh the cache
-);
-
-// Creates a mosaic based on 20 rows and 30 cols
-[$targetFilenameInPng, $targetFilenameInHtml] = $mosaic->create(20, 30);
+[$targetFilenameInPng, $targetFilenameInHtml] = $mosaic->createWithPlainColors(20, 30);
 ```
 
 #### Example(s)
@@ -88,13 +61,75 @@ $mosaic->loadImages(
 
 | Source                                          | Mosaic 2x2                                                   | Mosaic 20x20                                                 | Mosaic 100x100                                               |
 | ----------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| ![Source Image](./tests/test-image-200x200.jpg) | ![Source Image](./tests/control/test-image-200x200-2x2-imdb.png) | ![Source Image](./tests/control/test-image-200x200-20x20-imdb.png) | ![Source Image](./tests/control/test-image-200x200-100x100-imdb.png) |
+| ![Source Image](./tests/test-image-200x200.jpg) | ![Source Image](./tests/control/test-image-200x200-2x2-plain.png) | ![Source Image](./tests/control/test-image-200x200-20x20-plain.png) | ![Source Image](./tests/control/test-image-200x200-100x100-plain.png) |
+
+800x600 Image
+
+| Source                                          | Mosaic 2x2                                                   | Mosaic 20x20                                                 | Mosaic 100x100                                               |
+| ----------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![Source Image](./tests/test-image-800x600.jpg) | ![Source Image](./tests/control/test-image-800x600-2x2-plain.png) | ![Source Image](./tests/control/test-image-800x600-20x20-plain.png) | ![Source Image](./tests/control/test-image-800x600-100x100-plain.png) |
+
+### Similar Images  based on average color distance
+
+```php
+$regenerateCache = false;
+
+$mosaic = new Mosaic(__DIR__ .'/source.jpg');
+
+$mosaic->loadImages(
+    __DIR__ .'/tests/dataset/*.jpg',  // Select the pattern from your image dataset for replacements
+    __DIR__ .'/tests/dataset/cache',  // Cache filename
+    $regenerateCache				// True if you want to refresh the cache
+);
+
+// Creates a mosaic based on 20 rows and 30 cols
+[$targetFilenameInPng, $targetFilenameInHtml] = $mosaic->createWithImagesByAverageColors(20, 30);
+```
+
+#### Example(s)
+
+##### 200x200 Image
+
+| Source                                          | Mosaic 2x2                                                   | Mosaic 20x20                                                 | Mosaic 100x100                                               |
+| ----------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![Source Image](./tests/test-image-200x200.jpg) | ![Source Image](./tests/control/test-image-200x200-2x2-avg.png) | ![Source Image](./tests/control/test-image-200x200-20x20-avg.png) | ![Source Image](./tests/control/test-image-200x200-100x100-avg.png) |
 
 ##### 800x600 Image
 
 | Source                                          | Mosaic 2x2                                                   | Mosaic 20x20                                                 | Mosaic 100x100                                               |
 | ----------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| ![Source Image](./tests/test-image-800x600.jpg) | ![Source Image](./tests/control/test-image-800x600-2x2-imdb.png) | ![Source Image](./tests/control/test-image-800x600-20x20-imdb.png) | ![Source Image](./tests/control/test-image-800x600-100x100-imdb.png) |
+| ![Source Image](./tests/test-image-800x600.jpg) | ![Source Image](./tests/control/test-image-800x600-2x2-avg.png) | ![Source Image](./tests/control/test-image-800x600-20x20-avg.png) | ![Source Image](./tests/control/test-image-800x600-100x100-avg.png) |
+
+### Similar Images  based on perceptual hashes distance
+
+```php
+$regenerateCache = false;
+
+$mosaic = new Mosaic(__DIR__ .'/source.jpg');
+
+$mosaic->loadImages(
+    __DIR__ .'/tests/dataset/*.jpg',  // Select the pattern from your image dataset for replacements
+    __DIR__ .'/tests/dataset/cache',  // Cache filename
+    $regenerateCache				// True if you want to refresh the cache
+);
+
+// Creates a mosaic based on 20 rows and 30 cols
+[$targetFilenameInPng, $targetFilenameInHtml] = $mosaic->createWithImagesByPerceptualHashes(20, 30);
+```
+
+#### Example(s)
+
+##### 200x200 Image
+
+| Source                                          | Mosaic 2x2                                                   | Mosaic 20x20                                                 | Mosaic 100x100                                               |
+| ----------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![Source Image](./tests/test-image-200x200.jpg) | ![Source Image](./tests/control/test-image-200x200-2x2-phash.png) | ![Source Image](./tests/control/test-image-200x200-20x20-phash.png) | ![Source Image](./tests/control/test-image-200x200-100x100-phash.png) |
+
+##### 800x600 Image
+
+| Source                                          | Mosaic 2x2                                                   | Mosaic 20x20                                                 | Mosaic 100x100                                               |
+| ----------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![Source Image](./tests/test-image-800x600.jpg) | ![Source Image](./tests/control/test-image-800x600-2x2-phash.png) | ![Source Image](./tests/control/test-image-800x600-20x20-phash.png) | ![Source Image](./tests/control/test-image-800x600-100x100-phash.png) |
 
 ## Installation
 
@@ -155,7 +190,7 @@ $ composer check
 
 ## TODO
 
-- Using *Perceptual-Hashes* to improve the image selection from dataset.
+- N/A
 
 ## Changelog
 

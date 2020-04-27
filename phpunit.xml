@@ -20,7 +20,7 @@
     verbose="true"
 >
     <testsuites>
-        <testsuite name="Histogram Test Suite">
+        <testsuite name="Test Suite">
             <directory suffix="Test.php">tests</directory>
         </testsuite>
     </testsuites>

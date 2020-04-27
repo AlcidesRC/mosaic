@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * These sources has been extracted from IMDB and referring to Top-1000 Actors and Actresses.
+ *
+ * To collect the profile pictures just ...
+ *
+ * - Visit https://www.imdb.com/list/ls058011111/?sort=list_order,asc&mode=detail&page=1
+ * - Open Cevelopment Console (F12)
+ * - Goto Console tab
+ * - Type $x("//img[@height=209]").forEach(function(item) { console.log(item.src) })
+ * - Copy console log and proceed with next page
+ */
 $sources = [
     'https://m.media-amazon.com/images/M/MV5BMjAwNDU3MzcyOV5BMl5BanBnXkFtZTcwMjc0MTIxMw@@._V1_UY209_CR9,0,140,209_AL_.jpg',
     'https://m.media-amazon.com/images/M/MV5BMTQ3OTY0ODk0M15BMl5BanBnXkFtZTYwNzE4Njc4._V1_UY209_CR5,0,140,209_AL_.jpg',
@@ -304,6 +315,8 @@ $sources = [
 ];
 
 foreach ($sources as $i => $image) {
+    echo '.';
+
     $counter  = str_pad($i + 1, 3, '0', STR_PAD_LEFT);
 
     $filename = __DIR__ .'/tests/dataset/imdb-'. $counter .'.jpg';
@@ -349,3 +362,5 @@ foreach ($sources as $i => $image) {
 
     \imagedestroy($resource);
 }
+
+echo PHP_EOL;

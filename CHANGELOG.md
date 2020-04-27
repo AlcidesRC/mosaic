@@ -2,6 +2,10 @@
 
 All Notable changes to `mosaic` will be documented in this file
 
+## 1.0.2 - 2020-04-27
+
+- Image selection can be done by *average color* distance or *perceptual hashes* distance.
+
 ## 1.0.1 - 2020-04-24
 
 - Added extra HTML output in where `mosaic` is a `<table>` DOM element.

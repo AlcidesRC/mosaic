@@ -6,6 +6,9 @@ namespace AlcidesRC\Mosaic;
 
 use AlcidesRC\Colors\ColorHex;
 use AlcidesRC\Histogram\Histogram;
+use Jenssegers\ImageHash\Hash;
+use Jenssegers\ImageHash\ImageHash;
+use Jenssegers\ImageHash\Implementations\DifferenceHash;
 
 class Mosaic
 {
@@ -35,11 +38,18 @@ class Mosaic
     private $htmlTable;
 
     /**
-     * Images information container
+     * Images container
      *
      * @var array
      */
     private $images;
+
+    /**
+     * Perceptual Hasher container
+     *
+     * @var ImageHash
+     */
+    private $hasher;
 
     //-----------------------------------------------------------------------------------------------------------------
     // PUBLIC METHODS
@@ -57,6 +67,8 @@ class Mosaic
     {
         $this->htmlTable = [];
         $this->images    = [];
+
+        $this->hasher = new ImageHash(new DifferenceHash());
 
         $this->source = new Histogram();
         $this->source->loadFromFile($filename);
@@ -82,7 +94,23 @@ class Mosaic
      */
     public function loadImages(string $pattern, string $pathCache, bool $reloadCache = false) : void
     {
+        if (file_exists($pathCache) && ! $reloadCache) {
+            $this->images = json_decode(file_get_contents($pathCache), true);
+            return;
+        }
+
         $this->images = Histogram::processImages($pattern, $pathCache, $reloadCache);
+
+        // Attach the pHash as Integer
+        $this->images = array_map(function ($image) {
+            $filename = $image['details']['dirname'] .'/'. $image['details']['basename'];
+
+            $image['hash'] = $this->hasher->hash($filename)->toInt();
+
+            return $image;
+        }, $this->images);
+
+        file_put_contents($pathCache, json_encode($this->images));
     }
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -92,11 +120,10 @@ class Mosaic
      *
      * @param  int $cols
      * @param  int $rows
-     * @param  bool $withImages
      *
      * @return array
      */
-    public function create(int $cols, int $rows, bool $withImages = false) : array
+    public function createWithPlainColors(int $cols, int $rows) : array
     {
         $sectionWidth  = (int) floor($this->source->getDetails()['size']['width'] / $cols);
         $sectionHeight = (int) floor($this->source->getDetails()['size']['height'] / $rows);
@@ -120,12 +147,6 @@ class Mosaic
                     'color' => $hexColor,
                 ];
 
-                if (count($this->images) && $withImages) {
-                    $this->fillAreaWithImage($hexColor, $sectionWidth, $sectionHeight);
-
-                    continue;
-                }
-
                 $this->fillAreaWithColor($hexColor, $sectionWidth, $sectionHeight);
             }
         }
@@ -137,70 +158,106 @@ class Mosaic
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    // PRIVATED METHODS
-    //-----------------------------------------------------------------------------------------------------------------
 
     /**
-     * @access private
+     * @access public
      *
-     * @param  string $hexColor
+     * @param  int $cols
+     * @param  int $rows
      *
      * @return array
      */
-    private function findClosestImage(string $hexColor) : array
+    public function createWithImagesByAverageColors(int $cols, int $rows) : array
     {
-        $currentDistance = PHP_INT_MAX;
-        $image           = null;
+        $sectionWidth  = (int) floor($this->source->getDetails()['size']['width'] / $cols);
+        $sectionHeight = (int) floor($this->source->getDetails()['size']['height'] / $rows);
 
-        foreach ($this->images as $entry) {
-            $distance = ColorHex::distanceCie76($hexColor, $entry['colors']['average']);
+        foreach (range(1, $rows) as $row) {
+            foreach (range(1, $cols) as $col) {
+                $this->source->setArea(
+                    (int) (($col - 1) * $sectionWidth),
+                    (int) (($row - 1) * $sectionHeight),
+                    (int) ($col * $sectionWidth),
+                    (int) ($row * $sectionHeight)
+                );
 
-            if ($distance < $currentDistance) {
-                $currentDistance = $distance;
-                $image           = $entry;
+                $hexColor = $this->source->getAverageColor();
+
+                $this->htmlTable[$row][$col] = [
+                    'p1x'   => $this->source->getArea()['p1']->x,
+                    'p1y'   => $this->source->getArea()['p1']->y,
+                    'p2x'   => $this->source->getArea()['p2']->x,
+                    'p2y'   => $this->source->getArea()['p2']->y,
+                    'color' => $hexColor,
+                ];
+
+                $closestImage = $this->findClosestImageByColorDifference($hexColor);
+
+                $this->fillAreaWithImage($closestImage, $sectionWidth, $sectionHeight);
             }
         }
 
-        return $image;
+        return [
+            $this->saveAsPng($rows, $cols, $sectionWidth, $sectionHeight),
+            $this->saveAsHtml($rows, $cols, $sectionWidth, $sectionHeight),
+        ];
     }
 
     //-----------------------------------------------------------------------------------------------------------------
 
     /**
-     * @access private
+     * @access public
      *
-     * @param  string $hexColor
-     * @param  int $sectionWidth
-     * @param  int $sectionHeight
+     * @param  int $cols
+     * @param  int $rows
      *
      * @return array
      */
-    private function fillAreaWithImage(string $hexColor, int $sectionWidth, int $sectionHeight) : void
+    public function createWithImagesByPerceptualHashes(int $cols, int $rows) : array
     {
-        $closest = $this->findClosestImage($hexColor);
+        $sectionWidth  = (int) floor($this->source->getDetails()['size']['width'] / $cols);
+        $sectionHeight = (int) floor($this->source->getDetails()['size']['height'] / $rows);
 
-        $source = \imagecreatefromstring(
-            file_get_contents(
-                $closest['details']['dirname'] .'/'. $closest['details']['basename']
-            )
-        );
+        foreach (range(1, $rows) as $row) {
+            foreach (range(1, $cols) as $col) {
+                $this->source->setArea(
+                    (int) (($col - 1) * $sectionWidth),
+                    (int) (($row - 1) * $sectionHeight),
+                    (int) ($col * $sectionWidth),
+                    (int) ($row * $sectionHeight)
+                );
 
-        \imagecopyresampled(
-            $this->target,
-            $source,
-            $this->source->getArea()['p1']->x,
-            $this->source->getArea()['p1']->y,
-            0,
-            0,
-            $sectionWidth,
-            $sectionHeight,
-            $closest['details']['size']['width'],
-            $closest['details']['size']['height']
-        );
+                $area = $this->source->getArea();
 
-        \imagedestroy($source);
+                $hexColor = $this->source->getAverageColor();
+
+                $this->htmlTable[$row][$col] = [
+                    'p1x'   => $area['p1']->x,
+                    'p1y'   => $area['p1']->y,
+                    'p2x'   => $area['p2']->x,
+                    'p2y'   => $area['p2']->y,
+                    'color' => $hexColor,
+                ];
+
+                $closestImage = $this->findClosestImageByPerceptualHash(
+                    $area['p1']->x,
+                    $area['p1']->y,
+                    $area['p2']->x,
+                    $area['p2']->y
+                );
+
+                $this->fillAreaWithImage($closestImage, $sectionWidth, $sectionHeight);
+            }
+        }
+
+        return [
+            $this->saveAsPng($rows, $cols, $sectionWidth, $sectionHeight),
+            $this->saveAsHtml($rows, $cols, $sectionWidth, $sectionHeight),
+        ];
     }
 
+    //-----------------------------------------------------------------------------------------------------------------
+    // PRIVATED METHODS
     //-----------------------------------------------------------------------------------------------------------------
 
     /**
@@ -229,6 +286,125 @@ class Mosaic
                 (int) $rgbaColor['b']
             )
         );
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * @access private
+     *
+     * @param  array $closestImage
+     * @param  int $sectionWidth
+     * @param  int $sectionHeight
+     *
+     * @return array
+     */
+    private function fillAreaWithImage(array $closestImage, int $sectionWidth, int $sectionHeight) : void
+    {
+        $closest = \imagecreatefromstring(
+            file_get_contents(
+                $closestImage['details']['dirname'] .'/'. $closestImage['details']['basename']
+            )
+        );
+
+        \imagecopyresampled(
+            $this->target,
+            $closest,
+            $this->source->getArea()['p1']->x,
+            $this->source->getArea()['p1']->y,
+            0,
+            0,
+            $sectionWidth,
+            $sectionHeight,
+            $closestImage['details']['size']['width'],
+            $closestImage['details']['size']['height']
+        );
+
+        \imagedestroy($closest);
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * @access private
+     *
+     * @param  string $hexColor
+     *
+     * @return array
+     */
+    private function findClosestImageByColorDifference(string $hexColor) : array
+    {
+        // Recalculate the distance
+        $this->images = array_map(function ($image) use ($hexColor) {
+            $image['color-distance'] = ColorHex::distanceCie76($hexColor, $image['colors']['average']);
+            return $image;
+        }, $this->images);
+
+        // Sort the images by distance
+        array_multisort(
+            array_map(function($image) {
+                return $image['color-distance'];
+            }, $this->images
+        ), SORT_ASC, $this->images);
+
+        return $this->images[0];
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * @access private
+     *
+     * @param  int $p1x
+     * @param  int $p1y
+     * @param  int $p2x
+     * @param  int $p2y
+     *
+     * @return array
+     */
+    private function findClosestImageByPerceptualHash(int $p1x, int $p1y, int $p2x, int $p2y) : array
+    {
+        $getSectionHash = function (int $p1x, int $p1y, int $p2x, int $p2y) : Hash {
+            $filename = tempnam('/tmp', 'mosaic');
+
+            // Create a section image
+            $width  = $p2x - $p1x;
+            $height = $p2y - $p1y;
+            $partial = \imagecreatetruecolor($width, $height);
+            \imagealphablending($partial, false);
+            \imagesavealpha($partial, true);
+            \imagecopy($partial, $this->source->getDetails(true)['resource'], 0, 0, $p1x, $p1y, $width, $height);
+            \imagepng($partial, $filename);
+
+            // Calculate the image hash
+            $hash = $this->hasher->hash($filename);
+
+            // Destroy unnecesary image
+            \imagedestroy($partial);
+            unlink($filename);
+
+            return $hash;
+        };
+
+        $sourceHash = $getSectionHash($p1x, $p1y, $p2x, $p2y);
+
+        // Recalculate the distance
+        $this->images = array_map(function ($image) use ($sourceHash) {
+            $image['hash-distance'] = $sourceHash->distance(
+                Hash::fromInt($image['hash'])
+            );
+
+            return $image;
+        }, $this->images);
+
+        // Sort the images by distance
+        array_multisort(
+            array_map(function($image) {
+                return $image['hash-distance'];
+            }, $this->images
+        ), SORT_ASC, $this->images);
+
+        return $this->images[0];
     }
 
     //-----------------------------------------------------------------------------------------------------------------
